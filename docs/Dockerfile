@@ -20,9 +20,9 @@ RUN apt-get update
 RUN apt-get -y install  openjdk-8-jdk
 RUN apt-get -y install  scala
 
-ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/
+#ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/
 
-COPY ../../spark /home
+ADD spark /home/spark
 WORKDIR /home/spark/docs
 
 RUN gem install bundler
