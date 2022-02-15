@@ -1,0 +1,549 @@
+++ cd /home/spark/R/lib
+++ jar cfM /home/spark/R/lib/sparkr.zip SparkR
+++ popd
++ mkdir -p pkg/html
+/home/spark/R/pkg/html /home/spark/R /home/spark/R /home/spark/R
++ pushd pkg/html
++ /usr/bin/Rscript -e 'libDir <- "../../lib"; library(SparkR, lib.loc=libDir); knitr::knit_rd("SparkR", links = tools::findHTMLlinks(file.path(libDir, "SparkR")))'
+
+Attaching package: 'SparkR'
+
+The following objects are masked from 'package:stats':
+
+    cov, filter, lag, na.omit, predict, sd, var, window
+
+The following objects are masked from 'package:base':
+
+    as.data.frame, colnames, colnames<-, drop, endsWith, intersect,
+    rank, rbind, sample, startsWith, subset, summary, transform, union
+
+** knitting documentation of AFTSurvivalRegressionModel-class
+no examples found for AFTSurvivalRegressionModel-class
+** knitting documentation of ALSModel-class
+no examples found for ALSModel-class
+** knitting documentation of BisectingKMeansModel-class
+no examples found for BisectingKMeansModel-class
+** knitting documentation of DecisionTreeClassificationModel-class
+no examples found for DecisionTreeClassificationModel-class
+** knitting documentation of DecisionTreeRegressionModel-class
+no examples found for DecisionTreeRegressionModel-class
+** knitting documentation of FMClassificationModel-class
+no examples found for FMClassificationModel-class
+** knitting documentation of FMRegressionModel-class
+no examples found for FMRegressionModel-class
+** knitting documentation of FPGrowthModel-class
+no examples found for FPGrowthModel-class
+** knitting documentation of GBTClassificationModel-class
+no examples found for GBTClassificationModel-class
+** knitting documentation of GBTRegressionModel-class
+no examples found for GBTRegressionModel-class
+** knitting documentation of GaussianMixtureModel-class
+no examples found for GaussianMixtureModel-class
+** knitting documentation of GeneralizedLinearRegressionModel-class
+no examples found for GeneralizedLinearRegressionModel-class
+** knitting documentation of GroupedData
+no examples found for GroupedData
+** knitting documentation of IsotonicRegressionModel-class
+no examples found for IsotonicRegressionModel-class
+** knitting documentation of KMeansModel-class
+no examples found for KMeansModel-class
+** knitting documentation of KSTest-class
+no examples found for KSTest-class
+** knitting documentation of LDAModel-class
+no examples found for LDAModel-class
+** knitting documentation of LinearRegressionModel-class
+no examples found for LinearRegressionModel-class
+** knitting documentation of LinearSVCModel-class
+no examples found for LinearSVCModel-class
+** knitting documentation of LogisticRegressionModel-class
+no examples found for LogisticRegressionModel-class
+** knitting documentation of MultilayerPerceptronClassificationModel-class
+no examples found for MultilayerPerceptronClassificationModel-class
+** knitting documentation of NaiveBayesModel-class
+no examples found for NaiveBayesModel-class
+** knitting documentation of PowerIterationClustering-class
+no examples found for PowerIterationClustering-class
+** knitting documentation of PrefixSpan-class
+no examples found for PrefixSpan-class
+** knitting documentation of RandomForestClassificationModel-class
+no examples found for RandomForestClassificationModel-class
+** knitting documentation of RandomForestRegressionModel-class
+no examples found for RandomForestRegressionModel-class
+** knitting documentation of SparkDataFrame
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of StreamingQuery
+no examples found for StreamingQuery
+** knitting documentation of WindowSpec
+no examples found for WindowSpec
+** knitting documentation of alias
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of approxQuantile
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of arrange
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of as.data.frame
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of attach
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of avg
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of awaitTermination
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of between
+no examples found for between
+** knitting documentation of broadcast
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of cache
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of cacheTable
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of cancelJobGroup
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of cast
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of checkpoint
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of clearCache
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of clearJobGroup
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of coalesce
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of collect
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of coltypes
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of column
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of column_aggregate_functions
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of column_avro_functions
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of column_collection_functions
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of column_datetime_diff_functions
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of column_datetime_functions
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of column_math_functions
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of column_misc_functions
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of column_ml_functions
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of column_nonaggregate_functions
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of column_string_functions
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of column_window_functions
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of columnfunctions
+no examples found for columnfunctions
+** knitting documentation of columns
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of corr
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of count
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of cov
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of createDataFrame
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of createExternalTable-deprecated
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of createOrReplaceTempView
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of createTable
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of create_lambda
+no examples found for create_lambda
+** knitting documentation of crossJoin
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of crosstab
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of cube
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of currentDatabase
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of dapply
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of dapplyCollect
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of describe
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of dim
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of distinct
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of drop
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of dropDuplicates
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of dropFields
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of dropTempTable-deprecated
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of dropTempView
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of dtypes
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of endsWith
+no examples found for endsWith
+** knitting documentation of eq_null_safe
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of except
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of exceptAll
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of explain
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of filter
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of first
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of fitted
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of freqItems
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of gapply
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of gapplyCollect
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of getLocalProperty
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of getNumPartitions
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of glm
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of groupBy
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of hashCode
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of head
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of hint
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of histogram
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of insertInto
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of install.spark
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of intersect
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of intersectAll
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of invoke_higher_order_function
+no examples found for invoke_higher_order_function
+** knitting documentation of isActive
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of isLocal
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of isStreaming
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of join
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of last
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of lastProgress
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of limit
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of listColumns
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of listDatabases
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of listFunctions
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of listTables
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of localCheckpoint
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of match
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of merge
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of mutate
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of nafunctions
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of ncol
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of not
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of nrow
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of orderBy
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of otherwise
+no examples found for otherwise
+** knitting documentation of over
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of partitionBy
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of persist
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of pivot
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of predict
+no examples found for predict
+** knitting documentation of print.jobj
+no examples found for print.jobj
+** knitting documentation of print.structField
+no examples found for print.structField
+** knitting documentation of print.structType
+no examples found for print.structType
+** knitting documentation of printSchema
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of queryName
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of randomSplit
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of rangeBetween
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of rbind
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of read.df
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of read.jdbc
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of read.json
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of read.ml
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of read.orc
+no examples found for read.orc
+** knitting documentation of read.parquet
+no examples found for read.parquet
+** knitting documentation of read.stream
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of read.text
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of recoverPartitions
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of refreshByPath
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of refreshTable
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of registerTempTable-deprecated
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of rename
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of repartition
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of repartitionByRange
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of rollup
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of rowsBetween
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of sample
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of sampleBy
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of saveAsTable
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of schema
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of select
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of selectExpr
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of setCheckpointDir
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of setCurrentDatabase
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of setJobDescription
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of setJobGroup
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of setLocalProperty
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of setLogLevel
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of show
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of showDF
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.addFile
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.als
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.bisectingKmeans
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.decisionTree
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.fmClassifier
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.fmRegressor
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.fpGrowth
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.gaussianMixture
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.gbt
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.getSparkFiles
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.getSparkFilesRootDirectory
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.glm
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.isoreg
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.kmeans
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.kstest
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.lapply
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.lda
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.lm
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.logit
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.mlp
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.naiveBayes
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.powerIterationClustering
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.prefixSpan
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.randomForest
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.survreg
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of spark.svmLinear
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of sparkR.callJMethod
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of sparkR.callJStatic
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of sparkR.conf
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of sparkR.init-deprecated
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of sparkR.newJObject
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of sparkR.session
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of sparkR.session.stop
+no examples found for sparkR.session.stop
+** knitting documentation of sparkR.uiWebUrl
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of sparkR.version
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of sparkRHive.init-deprecated
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of sparkRSQL.init-deprecated
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of sql
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of startsWith
+no examples found for startsWith
+** knitting documentation of status
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of stopQuery
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of storageLevel
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of str
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of structField
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of structType
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of subset
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of substr
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of summarize
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of summary
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of tableNames
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of tableToDF
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of tables
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of take
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of toJSON
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of uncacheTable
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of union
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of unionAll
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of unionByName
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of unpersist
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of unresolved_named_lambda_var
+no examples found for unresolved_named_lambda_var
+** knitting documentation of windowOrderBy
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of windowPartitionBy
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of with
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of withColumn
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of withField
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of withWatermark
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of write.df
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of write.jdbc
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of write.json
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of write.ml
+no examples found for write.ml
+** knitting documentation of write.orc
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of write.parquet
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of write.stream
+Error in loadNamespace(name) : there is no package called 'markdown'
+** knitting documentation of write.text
+Error in loadNamespace(name) : there is no package called 'markdown'
+Error in loadNamespace(name) : there is no package called 'markdown'
+Calls: <Anonymous> ... loadNamespace -> withRestarts -> withOneRestart -> doWithOneRestart
+Execution halted
+                    ------------------------------------------------
+      Jekyll 4.2.1   Please append `--trace` to the `build` command 
+                     for any additional information or backtrace. 
+                    ------------------------------------------------
+/home/spark/docs/_plugins/copy_api_dirs.rb:147:in `<top (required)>': R doc generation failed (RuntimeError)
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/external.rb:60:in `require'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/external.rb:60:in `block in require_with_graceful_fail'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/external.rb:57:in `each'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/external.rb:57:in `require_with_graceful_fail'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/plugin_manager.rb:89:in `block in require_plugin_files'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/plugin_manager.rb:87:in `each'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/plugin_manager.rb:87:in `require_plugin_files'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/plugin_manager.rb:21:in `conscientious_require'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/site.rb:131:in `setup'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/site.rb:36:in `initialize'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/commands/build.rb:30:in `new'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/commands/build.rb:30:in `process'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/command.rb:91:in `block in process_with_graceful_fail'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/command.rb:91:in `each'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/command.rb:91:in `process_with_graceful_fail'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/lib/jekyll/commands/build.rb:18:in `block (2 levels) in init_with_program'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/mercenary-0.4.0/lib/mercenary/command.rb:221:in `block in execute'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/mercenary-0.4.0/lib/mercenary/command.rb:221:in `each'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/mercenary-0.4.0/lib/mercenary/command.rb:221:in `execute'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/mercenary-0.4.0/lib/mercenary/program.rb:44:in `go'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/mercenary-0.4.0/lib/mercenary.rb:21:in `program'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/gems/jekyll-4.2.1/exe/jekyll:15:in `<top (required)>'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/bin/jekyll:23:in `load'
+	from /home/spark/docs/.local_ruby_bundle/ruby/2.7.0/bin/jekyll:23:in `<main>'
+The command '/bin/sh -c bundle exec jekyll build' returned a non-zero code: 1
+
