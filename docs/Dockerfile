@@ -25,7 +25,7 @@ RUN Rscript -e 'install.packages(c("knitr", "devtools", "testthat", "rmarkdown",
 RUN Rscript -e "devtools::install_version('pkgdown', version='2.0.1', repos='https://cloud.r-project.org')"
 RUN Rscript -e "devtools::install_version('preferably', version='0.4', repos='https://cloud.r-project.org')"
 
-RUN apt-get -y install git
+RUN apt-get -y install git curl
 
 #ADD spark /home/spark
 WORKDIR /home
