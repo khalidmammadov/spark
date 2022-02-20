@@ -274,181 +274,181 @@ jobs:
 #      with:
 #        name: unit-tests-log-${{ matrix.modules }}-${{ matrix.comment }}-${{ matrix.java }}-${{ matrix.hadoop }}-${{ matrix.hive }}
 #        path: "**/target/unit-tests.log"
-
-  pyspark:
-    needs: [configure-jobs, precondition]
-    # Run PySpark coverage scheduled jobs for Apache Spark only
-    # Run scheduled jobs with JDK 17 in Apache Spark
-    # Run regular jobs for commit in both Apache Spark and forked repository
-    if: >-
-      (github.repository == 'apache/spark' && needs.configure-jobs.outputs.type == 'pyspark-coverage-scheduled')
-      || (github.repository == 'apache/spark' && needs.configure-jobs.outputs.type == 'scheduled' && needs.configure-jobs.outputs.java == '17')
-      || (needs.configure-jobs.outputs.type == 'regular' && fromJson(needs.precondition.outputs.required).pyspark == 'true')
-    name: "Build modules (${{ format('{0}, {1} job', needs.configure-jobs.outputs.branch, needs.configure-jobs.outputs.type) }}): ${{ matrix.modules }}"
-    runs-on: ubuntu-20.04
-    container:
-      image: dongjoon/apache-spark-github-action-image:20220207
-    strategy:
-      fail-fast: false
-      matrix:
-        java:
-          - ${{ needs.configure-jobs.outputs.java }}
-        modules:
-          - >-
-            pyspark-sql, pyspark-mllib, pyspark-resource
-          - >-
-            pyspark-core, pyspark-streaming, pyspark-ml
-          - >-
-            pyspark-pandas
-          - >-
-            pyspark-pandas-slow
-    env:
-      MODULES_TO_TEST: ${{ matrix.modules }}
-      HADOOP_PROFILE: ${{ needs.configure-jobs.outputs.hadoop }}
-      HIVE_PROFILE: hive2.3
-      GITHUB_PREV_SHA: ${{ github.event.before }}
-      SPARK_LOCAL_IP: localhost
-      SKIP_UNIDOC: true
-      SKIP_MIMA: true
-      METASPACE_SIZE: 1g
-    steps:
-    - name: Checkout Spark repository
-      uses: actions/checkout@v2
-      # In order to fetch changed files
-      with:
-        fetch-depth: 0
-        repository: apache/spark
-        ref: master
-    - name: Sync the current branch with the latest in Apache Spark
-      if: github.repository != 'apache/spark'
-      run: |
-        echo "APACHE_SPARK_REF=$(git rev-parse HEAD)" >> $GITHUB_ENV
-        git fetch https://github.com/$GITHUB_REPOSITORY.git ${GITHUB_REF#refs/heads/}
-        git -c user.name='Apache Spark Test Account' -c user.email='sparktestacc@gmail.com' merge --no-commit --progress --squash FETCH_HEAD
-        git -c user.name='Apache Spark Test Account' -c user.email='sparktestacc@gmail.com' commit -m "Merged commit"
-    # Cache local repositories. Note that GitHub Actions cache has a 2G limit.
-    - name: Cache Scala, SBT and Maven
-      uses: actions/cache@v2
-      with:
-        path: |
-          build/apache-maven-*
-          build/scala-*
-          build/*.jar
-          ~/.sbt
-        key: build-${{ hashFiles('**/pom.xml', 'project/build.properties', 'build/mvn', 'build/sbt', 'build/sbt-launch-lib.bash', 'build/spark-build-info') }}
-        restore-keys: |
-          build-
-    - name: Cache Coursier local repository
-      uses: actions/cache@v2
-      with:
-        path: ~/.cache/coursier
-        key: pyspark-coursier-${{ hashFiles('**/pom.xml', '**/plugins.sbt') }}
-        restore-keys: |
-          pyspark-coursier-
-    - name: Install Java ${{ matrix.java }}
-      uses: actions/setup-java@v1
-      with:
-        java-version: ${{ matrix.java }}
-    - name: List Python packages (Python 3.9, PyPy3)
-      run: |
-        python3.9 -m pip list
-        pypy3 -m pip list
-    - name: Install Conda for pip packaging test
-      run: |
-        curl -s https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh > miniconda.sh
-        bash miniconda.sh -b -p $HOME/miniconda
-    # Run the tests.
-    - name: Run tests
-      env: ${{ fromJSON(needs.configure-jobs.outputs.envs) }}
-      run: |
-        export PATH=$PATH:$HOME/miniconda/bin
-        ./dev/run-tests --parallelism 1 --modules "$MODULES_TO_TEST"
-    - name: Upload coverage to Codecov
-      if: needs.configure-jobs.outputs.type == 'pyspark-coverage-scheduled'
-      uses: codecov/codecov-action@v2
-      with:
-        files: ./python/coverage.xml
-        flags: unittests
-        name: PySpark
-    - name: Upload test results to report
-      if: always()
-      uses: actions/upload-artifact@v2
-      with:
-        name: test-results-${{ matrix.modules }}--8-${{ needs.configure-jobs.outputs.hadoop }}-hive2.3
-        path: "**/target/test-reports/*.xml"
-    - name: Upload unit tests log files
-      if: failure()
-      uses: actions/upload-artifact@v2
-      with:
-        name: unit-tests-log-${{ matrix.modules }}--8-${{ needs.configure-jobs.outputs.hadoop }}-hive2.3
-        path: "**/target/unit-tests.log"
-
-  sparkr:
-    needs: [configure-jobs, precondition]
-    if: >-
-      (needs.configure-jobs.outputs.type == 'regular' && fromJson(needs.precondition.outputs.required).sparkr == 'true')
-      || (github.repository == 'apache/spark' && needs.configure-jobs.outputs.type == 'scheduled' && needs.configure-jobs.outputs.java == '17')
-    name: "Build modules: sparkr"
-    runs-on: ubuntu-20.04
-    container:
-      image: dongjoon/apache-spark-github-action-image:20220207
-    env:
-      HADOOP_PROFILE: ${{ needs.configure-jobs.outputs.hadoop }}
-      HIVE_PROFILE: hive2.3
-      GITHUB_PREV_SHA: ${{ github.event.before }}
-      SPARK_LOCAL_IP: localhost
-      SKIP_MIMA: true
-    steps:
-    - name: Checkout Spark repository
-      uses: actions/checkout@v2
-      # In order to fetch changed files
-      with:
-        fetch-depth: 0
-        repository: apache/spark
-        ref: master
-    - name: Sync the current branch with the latest in Apache Spark
-      if: github.repository != 'apache/spark'
-      run: |
-        echo "APACHE_SPARK_REF=$(git rev-parse HEAD)" >> $GITHUB_ENV
-        git fetch https://github.com/$GITHUB_REPOSITORY.git ${GITHUB_REF#refs/heads/}
-        git -c user.name='Apache Spark Test Account' -c user.email='sparktestacc@gmail.com' merge --no-commit --progress --squash FETCH_HEAD
-        git -c user.name='Apache Spark Test Account' -c user.email='sparktestacc@gmail.com' commit -m "Merged commit"
-    # Cache local repositories. Note that GitHub Actions cache has a 2G limit.
-    - name: Cache Scala, SBT and Maven
-      uses: actions/cache@v2
-      with:
-        path: |
-          build/apache-maven-*
-          build/scala-*
-          build/*.jar
-          ~/.sbt
-        key: build-${{ hashFiles('**/pom.xml', 'project/build.properties', 'build/mvn', 'build/sbt', 'build/sbt-launch-lib.bash', 'build/spark-build-info') }}
-        restore-keys: |
-          build-
-    - name: Cache Coursier local repository
-      uses: actions/cache@v2
-      with:
-        path: ~/.cache/coursier
-        key: sparkr-coursier-${{ hashFiles('**/pom.xml', '**/plugins.sbt') }}
-        restore-keys: |
-          sparkr-coursier-
-    - name: Install Java ${{ needs.configure-jobs.outputs.java }}
-      uses: actions/setup-java@v1
-      with:
-        java-version: ${{ needs.configure-jobs.outputs.java }}
-    - name: Run tests
-      run: |
-        # The followings are also used by `r-lib/actions/setup-r` to avoid
-        # R issues at docker environment
-        export TZ=UTC
-        export _R_CHECK_SYSTEM_CLOCK_=FALSE
-        ./dev/run-tests --parallelism 1 --modules sparkr
-    - name: Upload test results to report
-      if: always()
-      uses: actions/upload-artifact@v2
-      with:
-        name: test-results-sparkr--8-${{ needs.configure-jobs.outputs.hadoop }}-hive2.3
-        path: "**/target/test-reports/*.xml"
+#
+#  pyspark:
+#    needs: [configure-jobs, precondition]
+#    # Run PySpark coverage scheduled jobs for Apache Spark only
+#    # Run scheduled jobs with JDK 17 in Apache Spark
+#    # Run regular jobs for commit in both Apache Spark and forked repository
+#    if: >-
+#      (github.repository == 'apache/spark' && needs.configure-jobs.outputs.type == 'pyspark-coverage-scheduled')
+#      || (github.repository == 'apache/spark' && needs.configure-jobs.outputs.type == 'scheduled' && needs.configure-jobs.outputs.java == '17')
+#      || (needs.configure-jobs.outputs.type == 'regular' && fromJson(needs.precondition.outputs.required).pyspark == 'true')
+#    name: "Build modules (${{ format('{0}, {1} job', needs.configure-jobs.outputs.branch, needs.configure-jobs.outputs.type) }}): ${{ matrix.modules }}"
+#    runs-on: ubuntu-20.04
+#    container:
+#      image: dongjoon/apache-spark-github-action-image:20220207
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        java:
+#          - ${{ needs.configure-jobs.outputs.java }}
+#        modules:
+#          - >-
+#            pyspark-sql, pyspark-mllib, pyspark-resource
+#          - >-
+#            pyspark-core, pyspark-streaming, pyspark-ml
+#          - >-
+#            pyspark-pandas
+#          - >-
+#            pyspark-pandas-slow
+#    env:
+#      MODULES_TO_TEST: ${{ matrix.modules }}
+#      HADOOP_PROFILE: ${{ needs.configure-jobs.outputs.hadoop }}
+#      HIVE_PROFILE: hive2.3
+#      GITHUB_PREV_SHA: ${{ github.event.before }}
+#      SPARK_LOCAL_IP: localhost
+#      SKIP_UNIDOC: true
+#      SKIP_MIMA: true
+#      METASPACE_SIZE: 1g
+#    steps:
+#    - name: Checkout Spark repository
+#      uses: actions/checkout@v2
+#      # In order to fetch changed files
+#      with:
+#        fetch-depth: 0
+#        repository: apache/spark
+#        ref: master
+#    - name: Sync the current branch with the latest in Apache Spark
+#      if: github.repository != 'apache/spark'
+#      run: |
+#        echo "APACHE_SPARK_REF=$(git rev-parse HEAD)" >> $GITHUB_ENV
+#        git fetch https://github.com/$GITHUB_REPOSITORY.git ${GITHUB_REF#refs/heads/}
+#        git -c user.name='Apache Spark Test Account' -c user.email='sparktestacc@gmail.com' merge --no-commit --progress --squash FETCH_HEAD
+#        git -c user.name='Apache Spark Test Account' -c user.email='sparktestacc@gmail.com' commit -m "Merged commit"
+#    # Cache local repositories. Note that GitHub Actions cache has a 2G limit.
+#    - name: Cache Scala, SBT and Maven
+#      uses: actions/cache@v2
+#      with:
+#        path: |
+#          build/apache-maven-*
+#          build/scala-*
+#          build/*.jar
+#          ~/.sbt
+#        key: build-${{ hashFiles('**/pom.xml', 'project/build.properties', 'build/mvn', 'build/sbt', 'build/sbt-launch-lib.bash', 'build/spark-build-info') }}
+#        restore-keys: |
+#          build-
+#    - name: Cache Coursier local repository
+#      uses: actions/cache@v2
+#      with:
+#        path: ~/.cache/coursier
+#        key: pyspark-coursier-${{ hashFiles('**/pom.xml', '**/plugins.sbt') }}
+#        restore-keys: |
+#          pyspark-coursier-
+#    - name: Install Java ${{ matrix.java }}
+#      uses: actions/setup-java@v1
+#      with:
+#        java-version: ${{ matrix.java }}
+#    - name: List Python packages (Python 3.9, PyPy3)
+#      run: |
+#        python3.9 -m pip list
+#        pypy3 -m pip list
+#    - name: Install Conda for pip packaging test
+#      run: |
+#        curl -s https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh > miniconda.sh
+#        bash miniconda.sh -b -p $HOME/miniconda
+#    # Run the tests.
+#    - name: Run tests
+#      env: ${{ fromJSON(needs.configure-jobs.outputs.envs) }}
+#      run: |
+#        export PATH=$PATH:$HOME/miniconda/bin
+#        ./dev/run-tests --parallelism 1 --modules "$MODULES_TO_TEST"
+#    - name: Upload coverage to Codecov
+#      if: needs.configure-jobs.outputs.type == 'pyspark-coverage-scheduled'
+#      uses: codecov/codecov-action@v2
+#      with:
+#        files: ./python/coverage.xml
+#        flags: unittests
+#        name: PySpark
+#    - name: Upload test results to report
+#      if: always()
+#      uses: actions/upload-artifact@v2
+#      with:
+#        name: test-results-${{ matrix.modules }}--8-${{ needs.configure-jobs.outputs.hadoop }}-hive2.3
+#        path: "**/target/test-reports/*.xml"
+#    - name: Upload unit tests log files
+#      if: failure()
+#      uses: actions/upload-artifact@v2
+#      with:
+#        name: unit-tests-log-${{ matrix.modules }}--8-${{ needs.configure-jobs.outputs.hadoop }}-hive2.3
+#        path: "**/target/unit-tests.log"
+#
+#  sparkr:
+#    needs: [configure-jobs, precondition]
+#    if: >-
+#      (needs.configure-jobs.outputs.type == 'regular' && fromJson(needs.precondition.outputs.required).sparkr == 'true')
+#      || (github.repository == 'apache/spark' && needs.configure-jobs.outputs.type == 'scheduled' && needs.configure-jobs.outputs.java == '17')
+#    name: "Build modules: sparkr"
+#    runs-on: ubuntu-20.04
+#    container:
+#      image: dongjoon/apache-spark-github-action-image:20220207
+#    env:
+#      HADOOP_PROFILE: ${{ needs.configure-jobs.outputs.hadoop }}
+#      HIVE_PROFILE: hive2.3
+#      GITHUB_PREV_SHA: ${{ github.event.before }}
+#      SPARK_LOCAL_IP: localhost
+#      SKIP_MIMA: true
+#    steps:
+#    - name: Checkout Spark repository
+#      uses: actions/checkout@v2
+#      # In order to fetch changed files
+#      with:
+#        fetch-depth: 0
+#        repository: apache/spark
+#        ref: master
+#    - name: Sync the current branch with the latest in Apache Spark
+#      if: github.repository != 'apache/spark'
+#      run: |
+#        echo "APACHE_SPARK_REF=$(git rev-parse HEAD)" >> $GITHUB_ENV
+#        git fetch https://github.com/$GITHUB_REPOSITORY.git ${GITHUB_REF#refs/heads/}
+#        git -c user.name='Apache Spark Test Account' -c user.email='sparktestacc@gmail.com' merge --no-commit --progress --squash FETCH_HEAD
+#        git -c user.name='Apache Spark Test Account' -c user.email='sparktestacc@gmail.com' commit -m "Merged commit"
+#    # Cache local repositories. Note that GitHub Actions cache has a 2G limit.
+#    - name: Cache Scala, SBT and Maven
+#      uses: actions/cache@v2
+#      with:
+#        path: |
+#          build/apache-maven-*
+#          build/scala-*
+#          build/*.jar
+#          ~/.sbt
+#        key: build-${{ hashFiles('**/pom.xml', 'project/build.properties', 'build/mvn', 'build/sbt', 'build/sbt-launch-lib.bash', 'build/spark-build-info') }}
+#        restore-keys: |
+#          build-
+#    - name: Cache Coursier local repository
+#      uses: actions/cache@v2
+#      with:
+#        path: ~/.cache/coursier
+#        key: sparkr-coursier-${{ hashFiles('**/pom.xml', '**/plugins.sbt') }}
+#        restore-keys: |
+#          sparkr-coursier-
+#    - name: Install Java ${{ needs.configure-jobs.outputs.java }}
+#      uses: actions/setup-java@v1
+#      with:
+#        java-version: ${{ needs.configure-jobs.outputs.java }}
+#    - name: Run tests
+#      run: |
+#        # The followings are also used by `r-lib/actions/setup-r` to avoid
+#        # R issues at docker environment
+#        export TZ=UTC
+#        export _R_CHECK_SYSTEM_CLOCK_=FALSE
+#        ./dev/run-tests --parallelism 1 --modules sparkr
+#    - name: Upload test results to report
+#      if: always()
+#      uses: actions/upload-artifact@v2
+#      with:
+#        name: test-results-sparkr--8-${{ needs.configure-jobs.outputs.hadoop }}-hive2.3
+#        path: "**/target/test-reports/*.xml"
 
   # Static analysis, and documentation build
   lint:
