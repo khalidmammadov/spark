@@ -21,7 +21,7 @@ RUN apt-get install -y libgit2-dev libssl-dev libxml2-dev
 
 RUN Rscript -e "install.packages(c('devtools'), repos='https://cloud.r-project.org/')"
 RUN Rscript -e "devtools::install_version('lintr', version='2.0.1', repos='https://cloud.r-project.org')"
-RUN Rscript -e 'install.packages(c("knitr", "devtools", "testthat", "rmarkdown", "roxygen2"), repos="https://cloud.r-project.org/")'
+RUN Rscript -e 'install.packages(c("knitr", "devtools", "testthat", "rmarkdown", "markdown", "e1071", "roxygen2"), repos="https://cloud.r-project.org/")'
 RUN Rscript -e "devtools::install_version('pkgdown', version='2.0.1', repos='https://cloud.r-project.org')"
 RUN Rscript -e "devtools::install_version('preferably', version='0.4', repos='https://cloud.r-project.org')"
 
@@ -35,7 +35,9 @@ WORKDIR /home/spark/docs
 RUN gem install bundler
 RUN bundle install
 
+RUN pip install markupsafe==2.0.1
 RUN bundle exec jekyll build
+
 
 
 EXPOSE 4000
