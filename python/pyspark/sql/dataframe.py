@@ -459,7 +459,9 @@ class DataFrame(PandasMapOpsMixin, PandasConversionMixin):
         Examples
         -------
         >>> df = spark.readStream.format("rate").load()
-        >>> df.writeStream.option("checkpointLocation", "/tmp/aa").toTable("tab3")
+        >>> df.writeStream.option("checkpointLocation", "/tmp/aa") \
+            .toTable("tab3")  # doctest: +ELLIPSIS
+        <pyspark.sql.streaming.StreamingQuery object at 0x...>
         """
         return DataStreamWriter(self)
 
@@ -3833,14 +3835,15 @@ class DataFrame(PandasMapOpsMixin, PandasConversionMixin):
         Examples
         --------
         >>> df = spark.createDataFrame([(1, 11), (1, 11), (3, 10), (4, 8), (4, 8)], ["c1", "c2"])
-        >>> df.crosstab("c1", "c2").show()
+        >>> df.crosstab("c1", "c2").sort("c1_c2").show()
         +-----+---+---+---+
         |c1_c2| 10| 11|  8|
         +-----+---+---+---+
-        |    4|  0|  0|  2|
         |    1|  0|  2|  0|
         |    3|  1|  0|  0|
+        |    4|  0|  0|  2|
         +-----+---+---+---+
+
         """
         if not isinstance(col1, str):
             raise TypeError("col1 should be a string.")
@@ -3876,11 +3879,11 @@ class DataFrame(PandasMapOpsMixin, PandasConversionMixin):
         Examples
         --------
         >>> df = spark.createDataFrame([(1, 11), (1, 11), (3, 10), (4, 8), (4, 8)], ["c1", "c2"])
-        >>> df.freqItems(["c1", "c2"]).show()
+        >>> df.freqItems(["c1", "c2"]).show()  # doctest: +SKIP
         +------------+------------+
         |c1_freqItems|c2_freqItems|
         +------------+------------+
-        |   [4, 1, 3]| [11, 8, 10]|
+        |   [4, 1, 3]| [8, 11, 10]|
         +------------+------------+
 
         Notes
