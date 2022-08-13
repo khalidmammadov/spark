@@ -74,6 +74,7 @@ import org.apache.spark.sql.types._
  */
 object AnsiTypeCoercion extends TypeCoercionBase {
   override def typeCoercionRules: List[Rule[LogicalPlan]] =
+    UnpivotCoercion ::
     WidenSetOperationTypes ::
     new AnsiCombinedTypeCoercionRule(
       InConversion ::
@@ -116,8 +117,7 @@ object AnsiTypeCoercion extends TypeCoercionBase {
         Some(widerType)
       }
 
-    case (_: TimestampType, _: DateType) | (_: DateType, _: TimestampType) =>
-      Some(TimestampType)
+    case (d1: DatetimeType, d2: DatetimeType) => Some(findWiderDateTimeType(d1, d2))
 
     case (t1: DayTimeIntervalType, t2: DayTimeIntervalType) =>
       Some(DayTimeIntervalType(t1.startField.min(t2.startField), t1.endField.max(t2.endField)))
@@ -135,6 +135,7 @@ object AnsiTypeCoercion extends TypeCoercionBase {
   }
 
   /** Promotes StringType to other data types. */
+  @scala.annotation.tailrec
   private def findWiderTypeForString(dt1: DataType, dt2: DataType): Option[DataType] = {
     (dt1, dt2) match {
       case (StringType, _: IntegralType) => Some(LongType)
@@ -204,6 +205,9 @@ object AnsiTypeCoercion extends TypeCoercionBase {
       case (StringType, AnyTimestampType) =>
         Some(AnyTimestampType.defaultConcreteType)
 
+      case (DateType, AnyTimestampType) =>
+        Some(AnyTimestampType.defaultConcreteType)
+
       case (_, target: DataType) =>
         if (Cast.canANSIStoreAssign(inType, target)) {
           Some(target)
@@ -220,7 +224,7 @@ object AnsiTypeCoercion extends TypeCoercionBase {
     }
   }
 
-  override def canCast(from: DataType, to: DataType): Boolean = AnsiCast.canCast(from, to)
+  override def canCast(from: DataType, to: DataType): Boolean = Cast.canAnsiCast(from, to)
 
   object PromoteStrings extends TypeCoercionRule {
     private def castExpr(expr: Expression, targetType: DataType): Expression = {
@@ -276,6 +280,9 @@ object AnsiTypeCoercion extends TypeCoercionBase {
    */
   object GetDateFieldOperations extends TypeCoercionRule {
     override def transform: PartialFunction[Expression, Expression] = {
+      // Skip nodes who's children have not been resolved yet.
+      case g if !g.childrenResolved => g
+
       case g: GetDateField if AnyTimestampType.unapply(g.child) =>
         g.withNewChildren(Seq(Cast(g.child, DateType)))
     }

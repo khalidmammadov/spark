@@ -36,8 +36,9 @@ import org.apache.spark.sql.catalyst.util.RebaseDateTime.RebaseSpec
 import org.apache.spark.sql.connector.expressions.aggregate.{Aggregation, Count, CountStar, Max, Min}
 import org.apache.spark.sql.execution.datasources.AggregatePushDownUtils
 import org.apache.spark.sql.execution.datasources.v2.V2ColumnUtils
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.internal.SQLConf.{LegacyBehaviorPolicy, PARQUET_AGGREGATE_PUSHDOWN_ENABLED}
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types.{ArrayType, AtomicType, DataType, MapType, StructField, StructType, UserDefinedType}
 
 object ParquetUtils {
   def inferSchema(
@@ -146,10 +147,80 @@ object ParquetUtils {
   }
 
   /**
+   * A StructField metadata key used to set the field id of a column in the Parquet schema.
+   */
+  val FIELD_ID_METADATA_KEY = "parquet.field.id"
+
+  /**
+   * Whether there exists a field in the schema, whether inner or leaf, has the parquet field
+   * ID metadata.
+   */
+  def hasFieldIds(schema: StructType): Boolean = {
+    def recursiveCheck(schema: DataType): Boolean = {
+      schema match {
+        case st: StructType =>
+          st.exists(field => hasFieldId(field) || recursiveCheck(field.dataType))
+
+        case at: ArrayType => recursiveCheck(at.elementType)
+
+        case mt: MapType => recursiveCheck(mt.keyType) || recursiveCheck(mt.valueType)
+
+        case _ =>
+          // No need to really check primitive types, just to terminate the recursion
+          false
+      }
+    }
+    if (schema.isEmpty) false else recursiveCheck(schema)
+  }
+
+  def hasFieldId(field: StructField): Boolean =
+    field.metadata.contains(FIELD_ID_METADATA_KEY)
+
+  def getFieldId(field: StructField): Int = {
+    require(hasFieldId(field),
+      s"The key `$FIELD_ID_METADATA_KEY` doesn't exist in the metadata of " + field)
+    try {
+      Math.toIntExact(field.metadata.getLong(FIELD_ID_METADATA_KEY))
+    } catch {
+      case _: ArithmeticException | _: ClassCastException =>
+        throw new IllegalArgumentException(
+          s"The key `$FIELD_ID_METADATA_KEY` must be a 32-bit integer")
+    }
+  }
+
+  /**
+   * Whether columnar read is supported for the input `schema`.
+   */
+  def isBatchReadSupportedForSchema(sqlConf: SQLConf, schema: StructType): Boolean =
+    sqlConf.parquetVectorizedReaderEnabled &&
+      schema.forall(f => isBatchReadSupported(sqlConf, f.dataType))
+
+  def isBatchReadSupported(sqlConf: SQLConf, dt: DataType): Boolean = dt match {
+    case _: AtomicType =>
+      true
+    case at: ArrayType =>
+      sqlConf.parquetVectorizedReaderNestedColumnEnabled &&
+        isBatchReadSupported(sqlConf, at.elementType)
+    case mt: MapType =>
+      sqlConf.parquetVectorizedReaderNestedColumnEnabled &&
+        isBatchReadSupported(sqlConf, mt.keyType) &&
+        isBatchReadSupported(sqlConf, mt.valueType)
+    case st: StructType =>
+      sqlConf.parquetVectorizedReaderNestedColumnEnabled &&
+        st.fields.forall(f => isBatchReadSupported(sqlConf, f.dataType))
+    case udt: UserDefinedType[_] =>
+      isBatchReadSupported(sqlConf, udt.sqlType)
+    case _ =>
+      false
+  }
+
+  /**
    * When the partial aggregates (Max/Min/Count) are pushed down to Parquet, we don't need to
    * createRowBaseReader to read data from Parquet and aggregate at Spark layer. Instead we want
    * to get the partial aggregates (Max/Min/Count) result using the statistics information
-   * from Parquet footer file, and then construct an InternalRow from these aggregate results.
+   * from Parquet file footer, and then construct an InternalRow from these aggregate results.
+   *
+   * NOTE: if statistics is missing from Parquet file footer, exception would be thrown.
    *
    * @return Aggregate results in the format of InternalRow
    */
@@ -210,7 +281,7 @@ object ParquetUtils {
         throw new SparkException("Unexpected parquet type name: " + primitiveTypeNames(i))
     }
 
-    if (aggregation.groupByColumns.nonEmpty) {
+    if (aggregation.groupByExpressions.nonEmpty) {
       val reorderedPartitionValues = AggregatePushDownUtils.reOrderPartitionCol(
         partitionSchema, aggregation, partitionValues)
       new JoinedRow(reorderedPartitionValues, converter.currentRecord)

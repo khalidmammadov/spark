@@ -29,6 +29,7 @@ import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.adaptive.DisableAdaptiveExecutionSuite
 import org.apache.spark.sql.execution.exchange.{Exchange, ReusedExchangeExec, ValidateRequirements}
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.tags.ExtendedSQLTest
 
 // scalastyle:off line.size.limit
@@ -47,22 +48,24 @@ import org.apache.spark.tags.ExtendedSQLTest
  *
  * To run the entire test suite:
  * {{{
- *   build/sbt "sql/testOnly *PlanStability[WithStats]Suite"
+ *   build/sbt "sql/testOnly *PlanStability*Suite"
  * }}}
  *
  * To run a single test file upon change:
  * {{{
- *   build/sbt "sql/testOnly *PlanStability[WithStats]Suite -- -z (tpcds-v1.4/q49)"
+ *   build/sbt "sql/testOnly *PlanStability*Suite -- -z (tpcds-v1.4/q49)"
  * }}}
  *
  * To re-generate golden files for entire suite, run:
  * {{{
- *   SPARK_GENERATE_GOLDEN_FILES=1 build/sbt "sql/testOnly *PlanStability[WithStats]Suite"
+ *   SPARK_GENERATE_GOLDEN_FILES=1 build/sbt "sql/testOnly *PlanStability*Suite"
+ *   SPARK_GENERATE_GOLDEN_FILES=1 SPARK_ANSI_SQL_MODE=true build/sbt "sql/testOnly *PlanStability*Suite"
  * }}}
  *
  * To re-generate golden file for a single test, run:
  * {{{
- *   SPARK_GENERATE_GOLDEN_FILES=1 build/sbt "sql/testOnly *PlanStability[WithStats]Suite -- -z (tpcds-v1.4/q49)"
+ *   SPARK_GENERATE_GOLDEN_FILES=1 build/sbt "sql/testOnly *PlanStability*Suite -- -z (tpcds-v1.4/q49)"
+ *   SPARK_GENERATE_GOLDEN_FILES=1 SPARK_ANSI_SQL_MODE=true build/sbt "sql/testOnly *PlanStability*Suite -- -z (tpcds-v1.4/q49)"
  * }}}
  */
 // scalastyle:on line.size.limit
@@ -77,13 +80,24 @@ trait PlanStabilitySuite extends DisableAdaptiveExecutionSuite {
 
   private val referenceRegex = "#\\d+".r
   private val normalizeRegex = "#\\d+L?".r
+  private val planIdRegex = "plan_id=\\d+".r
 
   private val clsName = this.getClass.getCanonicalName
 
   def goldenFilePath: String
 
+  private val approvedAnsiPlans: Seq[String] = Seq(
+    "q83",
+    "q83.sf100"
+  )
+
   private def getDirForTest(name: String): File = {
-    new File(goldenFilePath, name)
+    val goldenFileName = if (SQLConf.get.ansiEnabled && approvedAnsiPlans.contains(name)) {
+      name + ".ansi"
+    } else {
+      name
+    }
+    new File(goldenFilePath, goldenFileName)
   }
 
   private def isApproved(
@@ -221,7 +235,15 @@ trait PlanStabilitySuite extends DisableAdaptiveExecutionSuite {
     val map = new mutable.HashMap[String, String]()
     normalizeRegex.findAllMatchIn(plan).map(_.toString)
       .foreach(map.getOrElseUpdate(_, (map.size + 1).toString))
-    normalizeRegex.replaceAllIn(plan, regexMatch => s"#${map(regexMatch.toString)}")
+    val exprIdNormalized = normalizeRegex.replaceAllIn(
+      plan, regexMatch => s"#${map(regexMatch.toString)}")
+
+    // Normalize the plan id in Exchange nodes. See `Exchange.stringArgs`.
+    val planIdMap = new mutable.HashMap[String, String]()
+    planIdRegex.findAllMatchIn(exprIdNormalized).map(_.toString)
+      .foreach(planIdMap.getOrElseUpdate(_, (planIdMap.size + 1).toString))
+    planIdRegex.replaceAllIn(
+      exprIdNormalized, regexMatch => s"plan_id=${planIdMap(regexMatch.toString)}")
   }
 
   private def normalizeLocation(plan: String): String = {

@@ -113,7 +113,7 @@ case class WindowInPandasExec(
         (ChainedPythonFunctions(chained.funcs ++ Seq(udf.func)), children)
       case children =>
         // There should not be any other UDFs, or the children can't be evaluated directly.
-        assert(children.forall(_.find(_.isInstanceOf[PythonUDF]).isEmpty))
+        assert(children.forall(!_.exists(_.isInstanceOf[PythonUDF])))
         (ChainedPythonFunctions(Seq(udf.func)), udf.children)
     }
   }
@@ -332,8 +332,14 @@ case class WindowInPandasExec(
         // Iteration
         var rowIndex = 0
 
-        override final def hasNext: Boolean =
-          (bufferIterator != null && bufferIterator.hasNext) || nextRowAvailable
+        override final def hasNext: Boolean = {
+          val found = (bufferIterator != null && bufferIterator.hasNext) || nextRowAvailable
+          if (!found) {
+            // clear final partition
+            buffer.clear()
+          }
+          found
+        }
 
         override final def next(): Iterator[UnsafeRow] = {
           // Load the next partition if we need to.

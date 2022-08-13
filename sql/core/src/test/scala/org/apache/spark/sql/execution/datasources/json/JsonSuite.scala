@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.{Path, PathFilter}
 import org.apache.hadoop.io.SequenceFile.CompressionType
 import org.apache.hadoop.io.compress.GzipCodec
 
-import org.apache.spark.{SparkConf, SparkException, TestUtils}
+import org.apache.spark.{SparkConf, SparkException, SparkUpgradeException, TestUtils}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{functions => F, _}
 import org.apache.spark.sql.catalyst.json._
@@ -58,6 +58,9 @@ abstract class JsonSuite
   import testImplicits._
 
   override protected def dataSourceFormat = "json"
+
+  override protected def sparkConf: SparkConf =
+    super.sparkConf.set(SQLConf.ANSI_STRICT_INDEX_OPERATOR.key, "false")
 
   test("Type promotion") {
     def checkTypePromotion(expected: Any, actual: Any): Unit = {
@@ -452,12 +455,6 @@ abstract class JsonSuite
           Row(null, 21474836570L, 1.1, 21474836470L, "92233720368547758070", null) :: Nil
       )
 
-      // Number and Boolean conflict: resolve the type as number in this query.
-      checkAnswer(
-        sql("select num_bool - 10 from jsonTable where num_bool > 11"),
-        Row(2)
-      )
-
       // Widening to LongType
       checkAnswer(
         sql("select num_num_1 - 100 from jsonTable where num_num_1 > 11"),
@@ -482,17 +479,27 @@ abstract class JsonSuite
         Row(101.2) :: Row(21474836471.2) :: Nil
       )
 
-      // Number and String conflict: resolve the type as number in this query.
-      checkAnswer(
-        sql("select num_str + 1.2 from jsonTable where num_str > 14d"),
-        Row(92233720368547758071.2)
-      )
+      // The following tests are about type coercion instead of JSON data source.
+      // Here we simply forcus on the behavior of non-Ansi.
+      if(!SQLConf.get.ansiEnabled) {
+        // Number and Boolean conflict: resolve the type as number in this query.
+        checkAnswer(
+          sql("select num_bool - 10 from jsonTable where num_bool > 11"),
+          Row(2)
+        )
 
-      // Number and String conflict: resolve the type as number in this query.
-      checkAnswer(
-        sql("select num_str + 1.2 from jsonTable where num_str >= 92233720368547758060"),
-        Row(new java.math.BigDecimal("92233720368547758071.2").doubleValue)
-      )
+        // Number and String conflict: resolve the type as number in this query.
+        checkAnswer(
+          sql("select num_str + 1.2 from jsonTable where num_str > 14d"),
+          Row(92233720368547758071.2)
+        )
+
+        // Number and String conflict: resolve the type as number in this query.
+        checkAnswer(
+          sql("select num_str + 1.2 from jsonTable where num_str >= 92233720368547758060"),
+          Row(new java.math.BigDecimal("92233720368547758071.2").doubleValue)
+        )
+      }
 
       // String and Boolean conflict: resolve the type as string.
       checkAnswer(
@@ -1346,12 +1353,12 @@ abstract class JsonSuite
   }
 
   test("Dataset toJSON doesn't construct rdd") {
-    val containsRDD = spark.emptyDataFrame.toJSON.queryExecution.logical.find {
+    val containsRDDExists = spark.emptyDataFrame.toJSON.queryExecution.logical.exists {
       case ExternalRDD(_, _) => true
       case _ => false
     }
 
-    assert(containsRDD.isEmpty, "Expected logical plan of toJSON to not contain an RDD")
+    assert(!containsRDDExists, "Expected logical plan of toJSON to not contain an RDD")
   }
 
   test("JSONRelation equality test") {
@@ -2021,12 +2028,18 @@ abstract class JsonSuite
   test("SPARK-18772: Parse special floats correctly") {
     val jsons = Seq(
       """{"a": "NaN"}""",
+      """{"a": "+INF"}""",
+      """{"a": "-INF"}""",
       """{"a": "Infinity"}""",
+      """{"a": "+Infinity"}""",
       """{"a": "-Infinity"}""")
 
     // positive cases
     val checks: Seq[Double => Boolean] = Seq(
       _.isNaN,
+      _.isPosInfinity,
+      _.isNegInfinity,
+      _.isPosInfinity,
       _.isPosInfinity,
       _.isNegInfinity)
 
@@ -3031,8 +3044,8 @@ abstract class JsonSuite
             val ex = intercept[AnalysisException] {
               readback.filter($"AAA" === 0 && $"bbb" === 1).collect()
             }
-            assert(ex.getErrorClass == "MISSING_COLUMN")
-            assert(ex.messageParameters.head == "AAA")
+            assert(ex.getErrorClass == "UNRESOLVED_COLUMN")
+            assert(ex.messageParameters.head == "`AAA`")
             // Schema inferring
             val readback2 = spark.read.json(path.getCanonicalPath)
             checkAnswer(
@@ -3152,7 +3165,7 @@ abstract class JsonSuite
     Seq(missingFieldInput, nullValueInput).foreach { jsonString =>
       Seq("DROPMALFORMED", "FAILFAST", "PERMISSIVE").foreach { mode =>
         val json = spark.createDataset(
-          spark.sparkContext.parallelize(jsonString:: Nil))(Encoders.STRING)
+          spark.sparkContext.parallelize(jsonString :: Nil))(Encoders.STRING)
         val df = spark.read
           .option("mode", mode)
           .schema(schema)
@@ -3160,6 +3173,18 @@ abstract class JsonSuite
         assert(df.schema == expected)
         checkAnswer(df, Row(1, null) :: Nil)
       }
+    }
+
+    withSQLConf(SQLConf.LEGACY_RESPECT_NULLABILITY_IN_TEXT_DATASET_CONVERSION.key -> "true") {
+      checkAnswer(
+        spark.read.schema(
+          StructType(
+            StructField("f1", LongType, nullable = false) ::
+            StructField("f2", LongType, nullable = false) :: Nil)
+        ).option("mode", "DROPMALFORMED").json(Seq("""{"f1": 1}""").toDS),
+        // It is for testing legacy configuration. This is technically a bug as
+        // `0` has to be `null` but the schema is non-nullable.
+        Row(1, 0))
     }
   }
 
@@ -3222,6 +3247,79 @@ abstract class JsonSuite
         val df3 = spark.read.schema(schema).json(file.getCanonicalPath)
         checkAnswer(df3, df.collect().toSeq)
       }
+    }
+  }
+
+  test("SPARK-39731: Correctly parse dates and timestamps with yyyyMMdd pattern") {
+    withTempPath { path =>
+      Seq(
+        """{"date": "2020011", "ts": "2020011"}""",
+        """{"date": "20201203", "ts": "20201203"}""").toDF()
+        .repartition(1)
+        .write.text(path.getAbsolutePath)
+      val schema = new StructType()
+        .add("date", DateType)
+        .add("ts", TimestampType)
+      val output = spark.read
+        .schema(schema)
+        .option("dateFormat", "yyyyMMdd")
+        .option("timestampFormat", "yyyyMMdd")
+        .json(path.getAbsolutePath)
+
+      def check(mode: String, res: Seq[Row]): Unit = {
+        withSQLConf(SQLConf.LEGACY_TIME_PARSER_POLICY.key -> mode) {
+          checkAnswer(output, res)
+        }
+      }
+
+      check(
+        "legacy",
+        Seq(
+          Row(Date.valueOf("2020-01-01"), Timestamp.valueOf("2020-01-01 00:00:00")),
+          Row(Date.valueOf("2020-12-03"), Timestamp.valueOf("2020-12-03 00:00:00"))
+        )
+      )
+
+      check(
+        "corrected",
+        Seq(
+          Row(null, null),
+          Row(Date.valueOf("2020-12-03"), Timestamp.valueOf("2020-12-03 00:00:00"))
+        )
+      )
+
+      val err = intercept[SparkException] {
+        check("exception", Nil)
+      }.getCause
+      assert(err.isInstanceOf[SparkUpgradeException])
+    }
+  }
+
+  test("SPARK-39731: Handle date and timestamp parsing fallback") {
+    withTempPath { path =>
+      Seq("""{"date": "2020-01-01", "ts": "2020-01-01"}""").toDF()
+        .repartition(1)
+        .write.text(path.getAbsolutePath)
+      val schema = new StructType()
+        .add("date", DateType)
+        .add("ts", TimestampType)
+
+      def output(enableFallback: Boolean): DataFrame = spark.read
+        .schema(schema)
+        .option("dateFormat", "invalid")
+        .option("timestampFormat", "invalid")
+        .option("enableDateTimeParsingFallback", enableFallback)
+        .json(path.getAbsolutePath)
+
+      checkAnswer(
+        output(enableFallback = true),
+        Seq(Row(Date.valueOf("2020-01-01"), Timestamp.valueOf("2020-01-01 00:00:00")))
+      )
+
+      checkAnswer(
+        output(enableFallback = false),
+        Seq(Row(null, null))
+      )
     }
   }
 }

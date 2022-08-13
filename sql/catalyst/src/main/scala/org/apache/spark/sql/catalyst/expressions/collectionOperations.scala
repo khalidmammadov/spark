@@ -27,6 +27,7 @@ import org.apache.spark.sql.catalyst.analysis.{TypeCheckResult, TypeCoercion, Un
 import org.apache.spark.sql.catalyst.expressions.ArraySortLike.NullOrder
 import org.apache.spark.sql.catalyst.expressions.codegen._
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
+import org.apache.spark.sql.catalyst.trees.{BinaryLike, SQLQueryContext, UnaryLike}
 import org.apache.spark.sql.catalyst.trees.TreePattern.{ARRAYS_ZIP, CONCAT, TreePattern}
 import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.catalyst.util.DateTimeConstants._
@@ -89,8 +90,6 @@ trait BinaryArrayExpressionWithImplicitCast extends BinaryExpression
        4
       > SELECT _FUNC_(map('a', 1, 'b', 2));
        2
-      > SELECT _FUNC_(NULL);
-       -1
   """,
   since = "1.5.0",
   group = "collection_funcs")
@@ -132,6 +131,31 @@ case class Size(child: Expression, legacySizeOfNull: Boolean)
 
 object Size {
   def apply(child: Expression): Size = new Size(child)
+}
+
+
+/**
+ * Given an array, returns total number of elements in it.
+ */
+@ExpressionDescription(
+  usage = "_FUNC_(expr) - Returns the size of an array. The function returns null for null input.",
+  examples = """
+    Examples:
+      > SELECT _FUNC_(array('b', 'd', 'c', 'a'));
+       4
+  """,
+  since = "3.3.0",
+  group = "collection_funcs")
+case class ArraySize(child: Expression)
+  extends RuntimeReplaceable with ImplicitCastInputTypes with UnaryLike[Expression] {
+
+  override lazy val replacement: Expression = Size(child, legacySizeOfNull = false)
+
+  override def prettyName: String = "array_size"
+
+  override def inputTypes: Seq[AbstractDataType] = Seq(ArrayType)
+
+  protected def withNewChildInternal(newChild: Expression): ArraySize = copy(child = newChild)
 }
 
 /**
@@ -182,19 +206,41 @@ case class MapKeys(child: Expression)
   """,
   group = "map_funcs",
   since = "3.3.0")
-case class MapContainsKey(
-    left: Expression,
-    right: Expression,
-    child: Expression) extends RuntimeReplaceable {
-  def this(left: Expression, right: Expression) =
-    this(left, right, ArrayContains(MapKeys(left), right))
+case class MapContainsKey(left: Expression, right: Expression)
+  extends RuntimeReplaceable with BinaryLike[Expression] with ImplicitCastInputTypes {
 
-  override def exprsReplaced: Seq[Expression] = Seq(left, right)
+  override lazy val replacement: Expression = ArrayContains(MapKeys(left), right)
+
+  override def inputTypes: Seq[AbstractDataType] = {
+    (left.dataType, right.dataType) match {
+      case (_, NullType) => Seq.empty
+      case (MapType(kt, vt, valueContainsNull), dt) =>
+        TypeCoercion.findWiderTypeWithoutStringPromotionForTwo(kt, dt) match {
+          case Some(widerType) => Seq(MapType(widerType, vt, valueContainsNull), widerType)
+          case _ => Seq.empty
+        }
+      case _ => Seq.empty
+    }
+  }
+
+  override def checkInputDataTypes(): TypeCheckResult = {
+    (left.dataType, right.dataType) match {
+      case (_, NullType) =>
+        TypeCheckResult.TypeCheckFailure("Null typed values cannot be used as arguments")
+      case (MapType(kt, _, _), dt) if kt.sameType(dt) =>
+        TypeUtils.checkForOrderingExpr(kt, s"function $prettyName")
+      case _ => TypeCheckResult.TypeCheckFailure(s"Input to function $prettyName should have " +
+        s"been ${MapType.simpleString} followed by a value with same key type, but it's " +
+        s"[${left.dataType.catalogString}, ${right.dataType.catalogString}].")
+    }
+  }
 
   override def prettyName: String = "map_contains_key"
 
-  override protected def withNewChildInternal(newChild: Expression): MapContainsKey =
-    copy(child = newChild)
+  override protected def withNewChildrenInternal(
+      newLeft: Expression, newRight: Expression): Expression = {
+    copy(newLeft, newRight)
+  }
 }
 
 @ExpressionDescription(
@@ -1182,9 +1228,7 @@ case class Reverse(child: Expression)
   group = "array_funcs",
   since = "1.5.0")
 case class ArrayContains(left: Expression, right: Expression)
-  extends BinaryExpression with ImplicitCastInputTypes with NullIntolerant {
-
-  override def dataType: DataType = BooleanType
+  extends BinaryExpression with ImplicitCastInputTypes with NullIntolerant with Predicate {
 
   @transient private lazy val ordering: Ordering[Any] =
     TypeUtils.getInterpretedOrdering(right.dataType)
@@ -1285,7 +1329,7 @@ case class ArrayContains(left: Expression, right: Expression)
   since = "2.4.0")
 // scalastyle:off line.size.limit
 case class ArraysOverlap(left: Expression, right: Expression)
-  extends BinaryArrayExpressionWithImplicitCast with NullIntolerant {
+  extends BinaryArrayExpressionWithImplicitCast with NullIntolerant with Predicate {
 
   override def checkInputDataTypes(): TypeCheckResult = super.checkInputDataTypes() match {
     case TypeCheckResult.TypeCheckSuccess =>
@@ -1301,8 +1345,6 @@ case class ArraysOverlap(left: Expression, right: Expression)
   } else {
     bruteForceEval _
   }
-
-  override def dataType: DataType = BooleanType
 
   override def nullable: Boolean = {
     left.nullable || right.nullable || left.dataType.asInstanceOf[ArrayType].containsNull ||
@@ -2049,10 +2091,12 @@ case class ArrayPosition(left: Expression, right: Expression)
 case class ElementAt(
     left: Expression,
     right: Expression,
+    // The value to return if index is out of bound
+    defaultValueOutOfBound: Option[Literal] = None,
     failOnError: Boolean = SQLConf.get.ansiEnabled)
   extends GetMapValueUtil with GetArrayItemUtil with NullIntolerant {
 
-  def this(left: Expression, right: Expression) = this(left, right, SQLConf.get.ansiEnabled)
+  def this(left: Expression, right: Expression) = this(left, right, None, SQLConf.get.ansiEnabled)
 
   @transient private lazy val mapKeyType = left.dataType.asInstanceOf[MapType].keyType
 
@@ -2067,8 +2111,6 @@ case class ElementAt(
     case ArrayType(elementType, _) => elementType
     case MapType(_, valueType, _) => valueType
   }
-
-  override val isElementAtFunction: Boolean = true
 
   override def inputTypes: Seq[AbstractDataType] = {
     (left.dataType, right.dataType) match {
@@ -2131,13 +2173,17 @@ case class ElementAt(
         val index = ordinal.asInstanceOf[Int]
         if (array.numElements() < math.abs(index)) {
           if (failOnError) {
-            throw QueryExecutionErrors.invalidElementAtIndexError(index, array.numElements())
+            throw QueryExecutionErrors.invalidElementAtIndexError(
+              index, array.numElements(), getContextOrNull())
           } else {
-            null
+            defaultValueOutOfBound match {
+              case Some(value) => value.eval()
+              case None => null
+            }
           }
         } else {
           val idx = if (index == 0) {
-            throw QueryExecutionErrors.sqlArrayIndexNotStartAtOneError()
+            throw QueryExecutionErrors.elementAtByIndexZeroError()
           } else if (index > 0) {
             index - 1
           } else {
@@ -2170,9 +2216,21 @@ case class ElementAt(
           }
 
           val indexOutOfBoundBranch = if (failOnError) {
-            s"throw QueryExecutionErrors.invalidElementAtIndexError($index, $eval1.numElements());"
+            val errorContext = getContextOrNullCode(ctx)
+            // scalastyle:off line.size.limit
+            s"throw QueryExecutionErrors.invalidElementAtIndexError($index, $eval1.numElements(), $errorContext);"
+            // scalastyle:on line.size.limit
           } else {
-            s"${ev.isNull} = true;"
+            defaultValueOutOfBound match {
+              case Some(value) =>
+                val defaultValueEval = value.genCode(ctx)
+                s"""
+                  ${defaultValueEval.code}
+                  ${ev.isNull} = ${defaultValueEval.isNull}
+                  ${ev.value} = ${defaultValueEval.value}
+                """.stripMargin
+              case None => s"${ev.isNull} = true;"
+            }
           }
 
           s"""
@@ -2181,7 +2239,7 @@ case class ElementAt(
              |  $indexOutOfBoundBranch
              |} else {
              |  if ($index == 0) {
-             |    throw QueryExecutionErrors.sqlArrayIndexNotStartAtOneError();
+             |    throw QueryExecutionErrors.elementAtByIndexZeroError();
              |  } else if ($index > 0) {
              |    $index--;
              |  } else {
@@ -2203,6 +2261,12 @@ case class ElementAt(
 
   override protected def withNewChildrenInternal(
     newLeft: Expression, newRight: Expression): ElementAt = copy(left = newLeft, right = newRight)
+
+  override def initQueryContext(): Option[SQLQueryContext] = if (failOnError) {
+    Some(origin.context)
+  } else {
+    None
+  }
 }
 
 /**
@@ -2229,19 +2293,17 @@ case class ElementAt(
   """,
   since = "3.3.0",
   group = "map_funcs")
-case class TryElementAt(left: Expression, right: Expression, child: Expression)
-  extends RuntimeReplaceable {
+case class TryElementAt(left: Expression, right: Expression, replacement: Expression)
+  extends RuntimeReplaceable with InheritAnalysisRules {
   def this(left: Expression, right: Expression) =
-    this(left, right, ElementAt(left, right, failOnError = false))
-
-  override def flatArguments: Iterator[Any] = Iterator(left, right)
-
-  override def exprsReplaced: Seq[Expression] = Seq(left, right)
+    this(left, right, ElementAt(left, right, None, failOnError = false))
 
   override def prettyName: String = "try_element_at"
 
+  override def parameters: Seq[Expression] = Seq(left, right)
+
   override protected def withNewChildInternal(newChild: Expression): Expression =
-    this.copy(child = newChild)
+    this.copy(replacement = newChild)
 }
 
 /**
@@ -2950,6 +3012,22 @@ object Sequence {
       case TimestampNTZType => timestampNTZAddInterval
     }
 
+    private def toMicros(value: Long, scale: Long): Long = {
+      if (scale == MICROS_PER_DAY) {
+        daysToMicros(value.toInt, zoneId)
+      } else {
+        value * scale
+      }
+    }
+
+    private def fromMicros(value: Long, scale: Long): Long = {
+      if (scale == MICROS_PER_DAY) {
+        microsToDays(value, zoneId).toLong
+      } else {
+        value / scale
+      }
+    }
+
     override def eval(input1: Any, input2: Any, input3: Any): Array[T] = {
       val start = input1.asInstanceOf[T]
       val stop = input2.asInstanceOf[T]
@@ -2973,8 +3051,9 @@ object Sequence {
         // about a month length in days and a day length in microseconds
         val intervalStepInMicros =
           stepMicros + stepMonths * microsPerMonth + stepDays * MICROS_PER_DAY
-        val startMicros: Long = num.toLong(start) * scale
-        val stopMicros: Long = num.toLong(stop) * scale
+
+        val startMicros: Long = toMicros(num.toLong(start), scale)
+        val stopMicros: Long = toMicros(num.toLong(stop), scale)
 
         val maxEstimatedArrayLength =
           getSequenceLength(startMicros, stopMicros, input3, intervalStepInMicros)
@@ -2986,7 +3065,8 @@ object Sequence {
         var i = 0
 
         while (t < exclusiveItem ^ stepSign < 0) {
-          arr(i) = fromLong(t / scale)
+          val result = fromMicros(t, scale)
+          arr(i) = fromLong(result)
           i += 1
           t = addInterval(startMicros, i * stepMonths, i * stepDays, i * stepMicros, zoneId)
         }
@@ -2999,12 +3079,15 @@ object Sequence {
     protected def stepSplitCode(
          stepMonths: String, stepDays: String, stepMicros: String, step: String): String
 
+    private val dtu = DateTimeUtils.getClass.getName.stripSuffix("$")
+
     private val addIntervalCode = outerDataType match {
-      case TimestampType | DateType =>
-        "org.apache.spark.sql.catalyst.util.DateTimeUtils.timestampAddInterval"
-      case TimestampNTZType =>
-        "org.apache.spark.sql.catalyst.util.DateTimeUtils.timestampNTZAddInterval"
+      case TimestampType | DateType => s"$dtu.timestampAddInterval"
+      case TimestampNTZType => s"$dtu.timestampNTZAddInterval"
     }
+
+    private val daysToMicrosCode = s"$dtu.daysToMicros"
+    private val microsToDaysCode = s"$dtu.microsToDays"
 
     override def genCode(
         ctx: CodegenContext,
@@ -3049,6 +3132,24 @@ object Sequence {
 
       val stepSplits = stepSplitCode(stepMonths, stepDays, stepMicros, step)
 
+      val toMicrosCode = if (scale == MICROS_PER_DAY) {
+        s"""
+          |  final long $startMicros = $daysToMicrosCode((int) $start, $zid);
+          |  final long $stopMicros = $daysToMicrosCode((int) $stop, $zid);
+          |""".stripMargin
+      } else {
+        s"""
+          |  final long $startMicros = $start * ${scale}L;
+          |  final long $stopMicros = $stop * ${scale}L;
+          |""".stripMargin
+      }
+
+      val fromMicrosCode = if (scale == MICROS_PER_DAY) {
+        s"($elemType) $microsToDaysCode($t, $zid)"
+      } else {
+        s"($elemType) ($t / ${scale}L)"
+      }
+
       s"""
          |$stepSplits
          |
@@ -3060,8 +3161,7 @@ object Sequence {
          |} else if ($stepMonths == 0 && $stepDays == 0 && ${scale}L == 1) {
          |  ${backedSequenceImpl.genCode(ctx, start, stop, stepMicros, arr, elemType)};
          |} else {
-         |  final long $startMicros = $start * ${scale}L;
-         |  final long $stopMicros = $stop * ${scale}L;
+         |  $toMicrosCode
          |
          |  $sequenceLengthCode
          |
@@ -3073,7 +3173,7 @@ object Sequence {
          |  int $i = 0;
          |
          |  while ($t < $exclusiveItem ^ $stepSign < 0) {
-         |    $arr[$i] = ($elemType) ($t / ${scale}L);
+         |    $arr[$i] = $fromMicrosCode;
          |    $i += 1;
          |    $t = $addIntervalCode(
          |       $startMicros, $i * $stepMonths, $i * $stepDays, $i * $stepMicros, $zid);
@@ -3519,7 +3619,7 @@ case class ArrayDistinct(child: Expression)
       val array = data.toArray[AnyRef](elementType)
       val arrayBuffer = new scala.collection.mutable.ArrayBuffer[AnyRef]
       var alreadyStoredNull = false
-      for (i <- 0 until array.length) {
+      for (i <- array.indices) {
         if (array(i) != null) {
           var found = false
           var j = 0
@@ -4055,9 +4155,11 @@ case class ArrayIntersect(left: Expression, right: Expression) extends ArrayBina
           right.dataType.asInstanceOf[ArrayType].containsNull,
           array1, i, hashSetResult, withArray1NaNCheckCodeGenerator,
           s"""
-             |$nullElementIndex = $size;
-             |$size++;
-             |$builder.$$plus$$eq($nullValueHolder);
+             |if ($hashSet.containsNull()) {
+             |  $nullElementIndex = $size;
+             |  $size++;
+             |  $builder.$$plus$$eq($nullValueHolder);
+             |}
            """.stripMargin)
 
         // Only need to track null element index when result array's element is nullable.

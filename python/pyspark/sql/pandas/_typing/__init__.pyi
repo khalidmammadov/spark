@@ -32,9 +32,11 @@ from types import FunctionType
 from pyspark.sql._typing import LiteralType
 from pandas.core.frame import DataFrame as PandasDataFrame
 from pandas.core.series import Series as PandasSeries
+from numpy import ndarray as NDArray
 
-import pyarrow  # type: ignore[import]
+import pyarrow
 
+ArrayLike = NDArray
 DataFrameLike = PandasDataFrame
 SeriesLike = PandasSeries
 DataFrameOrSeriesLike = Union[DataFrameLike, SeriesLike]
@@ -42,11 +44,12 @@ DataFrameOrSeriesLike_ = TypeVar("DataFrameOrSeriesLike_", bound=DataFrameOrSeri
 
 # UDF annotations
 PandasScalarUDFType = Literal[200]
-PandasScalarIterUDFType = Literal[204]
 PandasGroupedMapUDFType = Literal[201]
-PandasCogroupedMapUDFType = Literal[206]
 PandasGroupedAggUDFType = Literal[202]
+PandasWindowAggUDFType = Literal[203]
+PandasScalarIterUDFType = Literal[204]
 PandasMapIterUDFType = Literal[205]
+PandasCogroupedMapUDFType = Literal[206]
 ArrowMapIterUDFType = Literal[207]
 
 class PandasVariadicScalarToScalarFunction(Protocol):

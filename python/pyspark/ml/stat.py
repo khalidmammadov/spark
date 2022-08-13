@@ -23,13 +23,13 @@ from typing import Optional, Tuple, TYPE_CHECKING
 from pyspark import since, SparkContext
 from pyspark.ml.common import _java2py, _py2java
 from pyspark.ml.linalg import Matrix, Vector
-from pyspark.ml.wrapper import JavaWrapper, _jvm  # type: ignore[attr-defined]
+from pyspark.ml.wrapper import JavaWrapper, _jvm
 from pyspark.sql.column import Column, _to_seq
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.functions import lit
 
 if TYPE_CHECKING:
-    from py4j.java_gateway import JavaObject  # type: ignore[import]
+    from py4j.java_gateway import JavaObject
 
 
 class ChiSquareTest:
@@ -274,28 +274,24 @@ class Summarizer:
     +-----------------------------------+
     |{[1.0,1.0,1.0], 1}                 |
     +-----------------------------------+
-    <BLANKLINE>
     >>> df.select(summarizer.summary(df.features)).show(truncate=False)
     +--------------------------------+
     |aggregate_metrics(features, 1.0)|
     +--------------------------------+
     |{[1.0,1.5,2.0], 2}              |
     +--------------------------------+
-    <BLANKLINE>
     >>> df.select(Summarizer.mean(df.features, df.weight)).show(truncate=False)
     +--------------+
     |mean(features)|
     +--------------+
     |[1.0,1.0,1.0] |
     +--------------+
-    <BLANKLINE>
     >>> df.select(Summarizer.mean(df.features)).show(truncate=False)
     +--------------+
     |mean(features)|
     +--------------+
     |[1.0,1.5,2.0] |
     +--------------+
-    <BLANKLINE>
     """
 
     @staticmethod
@@ -519,7 +515,9 @@ if __name__ == "__main__":
     globs["sc"] = sc
     globs["spark"] = spark
 
-    failure_count, test_count = doctest.testmod(globs=globs, optionflags=doctest.ELLIPSIS)
+    failure_count, test_count = doctest.testmod(
+        globs=globs, optionflags=doctest.ELLIPSIS | doctest.NORMALIZE_WHITESPACE
+    )
     spark.stop()
     if failure_count:
         sys.exit(-1)

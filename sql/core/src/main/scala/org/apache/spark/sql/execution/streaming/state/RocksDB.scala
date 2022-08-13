@@ -75,6 +75,7 @@ class RocksDB(
   private val dbOptions = new Options() // options to open the RocksDB
   dbOptions.setCreateIfMissing(true)
   dbOptions.setTableFormatConfig(tableFormatConfig)
+  dbOptions.setMaxOpenFiles(conf.maxOpenFiles)
   private val dbLogger = createLogger() // for forwarding RocksDB native logs to log4j
   dbOptions.setStatistics(new Statistics())
   private val nativeStats = dbOptions.statistics()
@@ -177,7 +178,7 @@ class RocksDB(
         numKeysOnWritingVersion -= 1
       }
     }
-    writeBatch.remove(key)
+    writeBatch.delete(key)
   }
 
   /**
@@ -371,6 +372,8 @@ class RocksDB(
     val readerMemUsage = getDBProperty("rocksdb.estimate-table-readers-mem")
     val memTableMemUsage = getDBProperty("rocksdb.size-all-mem-tables")
     val blockCacheUsage = getDBProperty("rocksdb.block-cache-usage")
+    // Get the approximate memory usage of this writeBatchWithIndex
+    val writeBatchMemUsage = writeBatch.getWriteBatch.getDataSize
     val nativeOpsHistograms = Seq(
       "get" -> DB_GET,
       "put" -> DB_WRITE,
@@ -404,7 +407,8 @@ class RocksDB(
     RocksDBMetrics(
       numKeysOnLoadedVersion,
       numKeysOnWritingVersion,
-      readerMemUsage + memTableMemUsage + blockCacheUsage,
+      readerMemUsage + memTableMemUsage + blockCacheUsage + writeBatchMemUsage,
+      writeBatchMemUsage,
       totalSSTFilesBytes,
       nativeOpsLatencyMicros.toMap,
       commitLatencyMs,
@@ -447,7 +451,7 @@ class RocksDB(
   }
 
   private def closePrefixScanIterators(): Unit = {
-    prefixScanReuseIter.entrySet().asScala.foreach(_.getValue.close())
+    prefixScanReuseIter.values().asScala.foreach(_.close())
     prefixScanReuseIter.clear()
   }
 
@@ -539,7 +543,8 @@ case class RocksDBConf(
     lockAcquireTimeoutMs: Long,
     resetStatsOnLoad : Boolean,
     formatVersion: Int,
-    trackTotalNumberOfRows: Boolean)
+    trackTotalNumberOfRows: Boolean,
+    maxOpenFiles: Int)
 
 object RocksDBConf {
   /** Common prefix of all confs in SQLConf that affects RocksDB */
@@ -555,6 +560,9 @@ object RocksDBConf {
   private val BLOCK_CACHE_SIZE_MB_CONF = ConfEntry("blockCacheSizeMB", "8")
   private val LOCK_ACQUIRE_TIMEOUT_MS_CONF = ConfEntry("lockAcquireTimeoutMs", "60000")
   private val RESET_STATS_ON_LOAD = ConfEntry("resetStatsOnLoad", "true")
+  // Config to specify the number of open files that can be used by the DB. Value of -1 means
+  // that files opened are always kept open.
+  private val MAX_OPEN_FILES_CONF = ConfEntry("maxOpenFiles", "-1")
   // Configuration to set the RocksDB format version. When upgrading the RocksDB version in Spark,
   // it may introduce a new table format version that can not be supported by an old RocksDB version
   // used by an old Spark version. Hence, we store the table format version in the checkpoint when
@@ -585,6 +593,13 @@ object RocksDBConf {
       }
     }
 
+    def getIntConf(conf: ConfEntry): Int = {
+      Try { confs.getOrElse(conf.fullName, conf.default).toInt } getOrElse {
+        throw new IllegalArgumentException(s"Invalid value for '${conf.fullName}', " +
+          "must be an integer")
+      }
+    }
+
     def getPositiveLongConf(conf: ConfEntry): Long = {
       Try { confs.getOrElse(conf.fullName, conf.default).toLong } filter { _ >= 0 } getOrElse {
         throw new IllegalArgumentException(
@@ -607,7 +622,8 @@ object RocksDBConf {
       getPositiveLongConf(LOCK_ACQUIRE_TIMEOUT_MS_CONF),
       getBooleanConf(RESET_STATS_ON_LOAD),
       getPositiveIntConf(FORMAT_VERSION),
-      getBooleanConf(TRACK_TOTAL_NUMBER_OF_ROWS))
+      getBooleanConf(TRACK_TOTAL_NUMBER_OF_ROWS),
+      getIntConf(MAX_OPEN_FILES_CONF))
   }
 
   def apply(): RocksDBConf = apply(new StateStoreConf())
@@ -617,7 +633,8 @@ object RocksDBConf {
 case class RocksDBMetrics(
     numCommittedKeys: Long,
     numUncommittedKeys: Long,
-    memUsageBytes: Long,
+    totalMemUsageBytes: Long,
+    writeBatchMemUsageBytes: Long,
     totalSSTFilesBytes: Long,
     nativeOpsHistograms: Map[String, RocksDBNativeHistogram],
     lastCommitLatencyMs: Map[String, Long],

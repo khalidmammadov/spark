@@ -25,7 +25,7 @@ from pyspark.ml.wrapper import JavaEstimator, JavaModel, JavaParams
 from pyspark.ml.param.shared import HasPredictionCol, Param, TypeConverters, Params
 
 if TYPE_CHECKING:
-    from py4j.java_gateway import JavaObject  # type: ignore[import]
+    from py4j.java_gateway import JavaObject
 
 __all__ = ["FPGrowth", "FPGrowthModel", "PrefixSpan"]
 
@@ -510,7 +510,7 @@ class PrefixSpan(JavaParams):
         self._transfer_params_to_java()
         assert self._java_obj is not None
         jdf = self._java_obj.findFrequentSequentialPatterns(dataset._jdf)
-        return DataFrame(jdf, dataset.sql_ctx)
+        return DataFrame(jdf, dataset.sparkSession)
 
 
 if __name__ == "__main__":

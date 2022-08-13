@@ -96,7 +96,7 @@ private[spark] class KubernetesClusterSchedulerBackend(
    * @return The application ID
    */
   override def applicationId(): String = {
-    conf.getOption("spark.app.id").map(_.toString).getOrElse(appId)
+    conf.getOption("spark.app.id").getOrElse(appId)
   }
 
   override def start(): Unit = {
@@ -141,11 +141,13 @@ private[spark] class KubernetesClusterSchedulerBackend(
       }
     }
 
-    Utils.tryLogNonFatalError {
-      kubernetesClient
-        .persistentVolumeClaims()
-        .withLabel(SPARK_APP_ID_LABEL, applicationId())
-        .delete()
+    if (conf.get(KUBERNETES_DRIVER_OWN_PVC)) {
+      Utils.tryLogNonFatalError {
+        kubernetesClient
+          .persistentVolumeClaims()
+          .withLabel(SPARK_APP_ID_LABEL, applicationId())
+          .delete()
+      }
     }
 
     if (shouldDeleteExecutors) {
@@ -302,7 +304,7 @@ private[spark] class KubernetesClusterSchedulerBackend(
             kubernetesClient.pods()
               .withName(x.podName)
               .edit({p: Pod => new PodBuilder(p).editMetadata()
-                .addToLabels(SPARK_EXECUTOR_ID_LABEL, newId.toString)
+                .addToLabels(SPARK_EXECUTOR_ID_LABEL, newId)
                 .endMetadata()
                 .build()})
           }

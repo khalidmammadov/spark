@@ -671,6 +671,14 @@ object functions {
   def last(columnName: String): Column = last(Column(columnName), ignoreNulls = false)
 
   /**
+   * Aggregate function: returns the most frequent value in a group.
+   *
+   * @group agg_funcs
+   * @since 3.4.0
+   */
+  def mode(e: Column): Column = withAggregateFunction { Mode(e.expr) }
+
+  /**
    * Aggregate function: returns the maximum value of the expression in a group.
    *
    * @group agg_funcs
@@ -711,6 +719,14 @@ object functions {
    * @since 1.4.0
    */
   def mean(columnName: String): Column = avg(columnName)
+
+  /**
+   * Aggregate function: returns the median of the values in a group.
+   *
+   * @group agg_funcs
+   * @since 3.4.0
+   */
+  def median(e: Column): Column = withAggregateFunction { Median(e.expr) }
 
   /**
    * Aggregate function: returns the minimum value of the expression in a group.
@@ -1768,15 +1784,27 @@ object functions {
   def cbrt(columnName: String): Column = cbrt(Column(columnName))
 
   /**
-   * Computes the ceiling of the given value.
+   * Computes the ceiling of the given value of `e` to `scale` decimal places.
+   *
+   * @group math_funcs
+   * @since 3.3.0
+   */
+  def ceil(e: Column, scale: Column): Column = withExpr {
+    UnresolvedFunction(Seq("ceil"), Seq(e.expr, scale.expr), isDistinct = false)
+  }
+
+  /**
+   * Computes the ceiling of the given value of `e` to 0 decimal places.
    *
    * @group math_funcs
    * @since 1.4.0
    */
-  def ceil(e: Column): Column = withExpr { Ceil(e.expr) }
+  def ceil(e: Column): Column = withExpr {
+    UnresolvedFunction(Seq("ceil"), Seq(e.expr), isDistinct = false)
+  }
 
   /**
-   * Computes the ceiling of the given column.
+   * Computes the ceiling of the given value of `e` to 0 decimal places.
    *
    * @group math_funcs
    * @since 1.4.0
@@ -1888,15 +1916,27 @@ object functions {
   def factorial(e: Column): Column = withExpr { Factorial(e.expr) }
 
   /**
-   * Computes the floor of the given value.
+   * Computes the floor of the given value of `e` to `scale` decimal places.
+   *
+   * @group math_funcs
+   * @since 3.3.0
+   */
+  def floor(e: Column, scale: Column): Column = withExpr {
+    UnresolvedFunction(Seq("floor"), Seq(e.expr, scale.expr), isDistinct = false)
+  }
+
+  /**
+   * Computes the floor of the given value of `e` to 0 decimal places.
    *
    * @group math_funcs
    * @since 1.4.0
    */
-  def floor(e: Column): Column = withExpr { Floor(e.expr) }
+  def floor(e: Column): Column = withExpr {
+    UnresolvedFunction(Seq("floor"), Seq(e.expr), isDistinct = false)
+  }
 
   /**
-   * Computes the floor of the given column.
+   * Computes the floor of the given column value to 0 decimal places.
    *
    * @group math_funcs
    * @since 1.4.0
@@ -2752,7 +2792,7 @@ object functions {
    * @since 3.3.0
    */
   def lpad(str: Column, len: Int, pad: Array[Byte]): Column = withExpr {
-    new BinaryLPad(str.expr, lit(len).expr, lit(pad).expr)
+    UnresolvedFunction("lpad", Seq(str.expr, lit(len).expr, lit(pad).expr), isDistinct = false)
   }
 
   /**
@@ -2841,7 +2881,7 @@ object functions {
    * @since 3.3.0
    */
   def rpad(str: Column, len: Int, pad: Array[Byte]): Column = withExpr {
-    new BinaryRPad(str.expr, lit(len).expr, lit(pad).expr)
+    UnresolvedFunction("rpad", Seq(str.expr, lit(len).expr, lit(pad).expr), isDistinct = false)
   }
 
   /**
@@ -3802,7 +3842,8 @@ object functions {
   }
 
   /**
-   * Creates timestamp from the number of seconds since UTC epoch.
+   * Converts the number of seconds from the Unix epoch (1970-01-01T00:00:00Z)
+   * to a timestamp.
    * @group datetime_funcs
    * @since 3.1.0
    */
@@ -5474,5 +5515,14 @@ object functions {
   @scala.annotation.varargs
   def call_udf(udfName: String, cols: Column*): Column = withExpr {
     UnresolvedFunction(udfName, cols.map(_.expr), isDistinct = false)
+  }
+
+  /**
+   * Unwrap UDT data type column into its underlying type.
+   *
+   * @since 3.4.0
+   */
+  def unwrap_udt(column: Column): Column = withExpr {
+    UnwrapUDT(column.expr)
   }
 }

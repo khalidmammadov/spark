@@ -61,7 +61,7 @@ object PartitionSpec {
   val emptySpec = PartitionSpec(StructType(Seq.empty[StructField]), Seq.empty[PartitionPath])
 }
 
-object PartitioningUtils extends SQLConfHelper{
+object PartitioningUtils extends SQLConfHelper {
 
   val timestampPartitionPattern = "yyyy-MM-dd HH:mm:ss[.S]"
 
@@ -262,7 +262,7 @@ object PartitioningUtils extends SQLConfHelper{
         // Once we get the string, we try to parse it and find the partition column and value.
         val maybeColumn =
           parsePartitionColumn(currentPath.getName, typeInference, userSpecifiedDataTypes,
-            validatePartitionColumns, zoneId, dateFormatter, timestampFormatter)
+            zoneId, dateFormatter, timestampFormatter)
         maybeColumn.foreach(columns += _)
 
         // Now, we determine if we should stop.
@@ -296,7 +296,6 @@ object PartitioningUtils extends SQLConfHelper{
       columnSpec: String,
       typeInference: Boolean,
       userSpecifiedDataTypes: Map[String, DataType],
-      validatePartitionColumns: Boolean,
       zoneId: ZoneId,
       dateFormatter: DateFormatter,
       timestampFormatter: TimestampFormatter): Option[(String, TypedPartValue)] = {
@@ -360,7 +359,7 @@ object PartitioningUtils extends SQLConfHelper{
   def removeLeadingZerosFromNumberTypePartition(value: String, dataType: DataType): String =
     dataType match {
       case ByteType | ShortType | IntegerType | LongType | FloatType | DoubleType =>
-        castPartValueToDesiredType(dataType, value, null).toString
+        Option(castPartValueToDesiredType(dataType, value, null)).map(_.toString).orNull
       case _ => value
     }
 
@@ -546,6 +545,8 @@ object PartitioningUtils extends SQLConfHelper{
       }
     case it: AnsiIntervalType =>
       Cast(Literal(unescapePathName(value)), it).eval()
+    case BinaryType => value.getBytes()
+    case BooleanType => value.toBoolean
     case dt => throw QueryExecutionErrors.typeUnsupportedError(dt)
   }
 
