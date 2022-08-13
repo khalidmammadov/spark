@@ -457,11 +457,11 @@ class DataFrame(PandasMapOpsMixin, PandasConversionMixin):
         :class:`DataStreamWriter`
 
         Examples
-        -------
+        --------
         >>> df = spark.readStream.format("rate").load()
-        >>> df.writeStream.option("checkpointLocation", "/tmp/aa") \
-            .toTable("tab3")  # doctest: +ELLIPSIS
-        <pyspark.sql.streaming.StreamingQuery object at 0x...>
+        >>> dsw = df.writeStream
+        >>> dsw.option("checkpointLocation", "/tmp/c").toTable("tab3")  # doctest: +ELLIPSIS
+        <pyspark.sql.streaming.query.StreamingQuery object at 0x...>
         """
         return DataStreamWriter(self)
 
@@ -2987,7 +2987,11 @@ class DataFrame(PandasMapOpsMixin, PandasConversionMixin):
 
         Also as standard in SQL, this function resolves columns by position (not by name).
 
-        .. versionadded:: 2.0.0
+        .. versionadded:: 2.0
+
+        See Also
+        --------
+        DataFrame.unionAll
 
         Parameters
         ----------
@@ -3017,9 +3021,6 @@ class DataFrame(PandasMapOpsMixin, PandasConversionMixin):
         |   1|   2|   3|
         +----+----+----+
 
-        See Also
-        --------
-        DataFrame.unionAll
         """
         return DataFrame(self._jdf.union(other._jdf), self.sparkSession)
 
@@ -3037,6 +3038,10 @@ class DataFrame(PandasMapOpsMixin, PandasConversionMixin):
 
         .. versionadded:: 1.3.0
 
+        See Also
+        --------
+        DataFrame.union
+
         Parameters
         ----------
         other : :class:`DataFrame`
@@ -3047,9 +3052,6 @@ class DataFrame(PandasMapOpsMixin, PandasConversionMixin):
         :class:`DataFrame`
             Combined DataFrame
 
-        See Also
-        --------
-        DataFrame.union
         """
         return self.union(other)
 
