@@ -27,7 +27,7 @@ import scala.collection.mutable.ArrayBuffer
 import org.apache.hadoop.fs.{FileStatus, Path, RawLocalFileSystem}
 import org.apache.hadoop.mapreduce.JobContext
 
-import org.apache.spark.SparkConf
+import org.apache.spark.{SparkConf, SparkThrowable}
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.internal.io.FileCommitProtocol
 import org.apache.spark.scheduler.{SparkListener, SparkListenerTaskEnd}
@@ -35,6 +35,7 @@ import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.apache.spark.sql.catalyst.util.stringToFile
 import org.apache.spark.sql.execution.DataSourceScanExec
 import org.apache.spark.sql.execution.datasources._
+import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
 import org.apache.spark.sql.execution.datasources.v2.{BatchScanExec, DataSourceV2Relation, FileScan, FileTable}
 import org.apache.spark.sql.execution.streaming._
 import org.apache.spark.sql.functions._
@@ -197,6 +198,62 @@ abstract class FileStreamSinkSuite extends StreamTest {
             query.stop()
           }
         }
+      }
+    }
+  }
+
+  test("SPARK-37946: Partitioned writing and missing partitions column") {
+    withTempDir { outputDir =>
+      withTempDir { checkpointDir =>
+        val outputPath = outputDir.getAbsolutePath
+        val inputData = MemoryStream[Int]
+        val df = inputData.toDS().toDF("id")
+
+        var query: StreamingQuery = null
+
+        try {
+          query = df
+              .writeStream
+              .partitionBy("id", "missingColumn")
+              .option("checkpointLocation", checkpointDir.getAbsolutePath)
+              .format("parquet")
+              .start(outputPath)
+        } catch {
+          case e: SparkThrowable =>
+            checkError(
+              exception = e,
+              errorClass = "_LEGACY_ERROR_TEMP_1196",
+              parameters = Map(
+                "columnType" -> "Partition",
+                "columnName" -> "missingColumn",
+                "validColumnNames" -> "id")
+            )
+        }
+        finally {
+          if (query != null) {
+            query.stop()
+          }
+        }
+      }
+    }
+  }
+
+  test("SPARK-37946: Partitioned writing and incorrect partitions") {
+    withTempDir { outputDir =>
+      val df = Seq("1").toDF()
+      val outputPath = outputDir.getAbsolutePath
+      try {
+        val sink =
+          new FileStreamSink(spark, outputPath, new ParquetFileFormat, Seq("a"), Map.empty)
+                      sink.addBatch(1, df)
+      } catch {
+        case e: SparkThrowable =>
+          checkError(
+            exception = e,
+            errorClass = "PARTITION_COLUMN_NOT_FOUND",
+            parameters = Map(
+              "col" -> "a",
+              "schema" -> df.schema.toString()))
       }
     }
   }

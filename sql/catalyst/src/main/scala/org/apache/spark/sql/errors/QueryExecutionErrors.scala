@@ -1992,13 +1992,14 @@ private[sql] object QueryExecutionErrors extends QueryErrorsBase {
       cause = null)
   }
 
-  def partitionColumnNotFoundInSchemaError(
-      col: String, schema: StructType): SparkRuntimeException = {
+  def partitionColumnNotFoundInSchemaError(col: String, schema: StructType): Throwable = {
     new SparkRuntimeException(
-      errorClass = "_LEGACY_ERROR_TEMP_2201",
+      errorClass = "PARTITION_COLUMN_NOT_FOUND",
       messageParameters = Map(
         "col" -> col,
-        "schema" -> schema.toString()))
+        "schema" -> schema.toString()),
+      context = Array.empty,
+      summary = "")
   }
 
   def stateNotDefinedOrAlreadyRemovedError(): Throwable = {

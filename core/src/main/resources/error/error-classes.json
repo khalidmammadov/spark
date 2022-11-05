@@ -804,6 +804,12 @@
     ],
     "sqlState" : "42000"
   },
+  "PARTITION_COLUMN_NOT_FOUND" : {
+    "message" : [
+      "Partition column <col> not found in schema <schema>."
+    ],
+    "sqlState" : "42000"
+  },
   "PARTITIONS_NOT_FOUND" : {
     "message" : [
       "The partition(s) <partitionList> cannot be found in table <tableName>.",
