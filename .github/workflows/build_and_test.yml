@@ -350,6 +350,7 @@ jobs:
     steps:
     - name: Checkout Spark repository
       uses: actions/checkout@v3
+      run: git config --system --add safe.directory /__w/spark/spark
       # In order to fetch changed files
       with:
         fetch-depth: 0
