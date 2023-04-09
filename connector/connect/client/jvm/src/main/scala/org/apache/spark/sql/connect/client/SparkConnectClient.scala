@@ -402,7 +402,7 @@ object SparkConnectClient {
      * Configure the builder using the env SPARK_REMOTE environment variable.
      */
     def loadFromEnvironment(): Builder = {
-      sys.env.get("SPARK_REMOTE").foreach(connectionString)
+      sys.env.get(SPARK_REMOTE).foreach(connectionString)
       this
     }
 
