@@ -39,7 +39,7 @@ For general development tips, including info on developing Spark using an IDE, s
 
 ## Interactive Scala Shell
 
-The easiest way to start using Spark is through the Scala shell:
+The easiest way to start, using Spark is through the Scala shell:
 
 ```bash
 ./bin/spark-shell
