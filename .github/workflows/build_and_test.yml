@@ -350,8 +350,7 @@ jobs:
     steps:
     - name: Checkout Spark repository
       uses: actions/checkout@v3
-      run: git config --system --add safe.directory /__w/spark/spark
-      # In order to fetch changed files
+    # In order to fetch changed files
       with:
         fetch-depth: 0
         repository: apache/spark
@@ -360,6 +359,7 @@ jobs:
       if: github.repository != 'apache/spark'
       run: |
         echo "APACHE_SPARK_REF=$(git rev-parse HEAD)" >> $GITHUB_ENV
+        git config --system --add safe.directory /__w/spark/spark
         git fetch https://github.com/$GITHUB_REPOSITORY.git ${GITHUB_REF#refs/heads/}
         git -c user.name='Apache Spark Test Account' -c user.email='sparktestacc@gmail.com' merge --no-commit --progress --squash FETCH_HEAD
         git -c user.name='Apache Spark Test Account' -c user.email='sparktestacc@gmail.com' commit -m "Merged commit" --allow-empty
