@@ -400,6 +400,7 @@ if __name__ == "__main__":
     if "pypy" not in platform.python_implementation().lower() and sys.version_info[:2] >= (3, 7):
         import doctest
         import pyspark.util
+        import datetime
         from pyspark.context import SparkContext
 
         globs = pyspark.util.__dict__.copy()
