@@ -116,19 +116,6 @@ private[spark] class TorrentBroadcast[T: ClassTag](obj: T, id: Long, serializedO
     }
   }
 
-  private def calcChecksum(block: ByteBuffer): Int = {
-    val adler = new Adler32()
-    if (block.hasArray) {
-      adler.update(block.array, block.arrayOffset + block.position(), block.limit()
-        - block.position())
-    } else {
-      val bytes = new Array[Byte](block.remaining())
-      block.duplicate.get(bytes)
-      adler.update(bytes)
-    }
-    adler.getValue.toInt
-  }
-
   /**
    * Divide the object into multiple blocks and put those blocks in the block manager.
    *
@@ -164,7 +151,7 @@ private[spark] class TorrentBroadcast[T: ClassTag](obj: T, id: Long, serializedO
       }
       blocks.zipWithIndex.foreach { case (block, i) =>
         if (checksumEnabled) {
-          checksums(i) = calcChecksum(block)
+          checksums(i) = TorrentBroadcast.calcChecksum(block)
         }
         val pieceId = BroadcastBlockId(id, "piece" + i)
         val bytes = new ChunkedByteBuffer(block.duplicate())
@@ -203,7 +190,7 @@ private[spark] class TorrentBroadcast[T: ClassTag](obj: T, id: Long, serializedO
           bm.getRemoteBytes(pieceId) match {
             case Some(b) =>
               if (checksumEnabled) {
-                val sum = calcChecksum(b.chunks(0))
+                val sum = TorrentBroadcast.calcChecksum(b.chunks(0))
                 if (sum != checksums(pid)) {
                   throw SparkException.internalError(
                     s"corrupt remote block $pieceId of $broadcastId: $sum != ${checksums(pid)}",
@@ -393,5 +380,18 @@ private object TorrentBroadcast extends Logging {
   def unpersist(id: Long, removeFromDriver: Boolean, blocking: Boolean): Unit = {
     logDebug(s"Unpersisting TorrentBroadcast $id")
     SparkEnv.get.blockManager.master.removeBroadcast(id, removeFromDriver, blocking)
+  }
+
+  private def calcChecksum(block: ByteBuffer): Int = {
+    val adler = new Adler32()
+    if (block.hasArray) {
+      adler.update(block.array, block.arrayOffset + block.position(), block.limit()
+        - block.position())
+    } else {
+      val bytes = new Array[Byte](block.remaining())
+      block.duplicate.get(bytes)
+      adler.update(bytes)
+    }
+    adler.getValue.toInt
   }
 }
